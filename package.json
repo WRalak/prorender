@@ -1,0 +1,36 @@
+{
+  "name": "prorender",
+  "version": "1.0.0",
+  "description": "A comprehensive real estate rental platform for tenants, agents, and administrators",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "cd server && npm run dev",
+    "client:dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "server:start": "cd server && npm start",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "seed": "cd server && npm run seed",
+    "test": "cd server && npm test && cd ../client && npm test"
+  },
+  "keywords": [
+    "real-estate",
+    "rental",
+    "property-management",
+    "tenant",
+    "agent",
+    "react",
+    "nodejs",
+    "express",
+    "mongodb"
+  ],
+  "author": "PropRent Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

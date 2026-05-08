@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo "🚀 Starting PropRent Deployment"
+
+# Build client
+echo "📦 Building client..."
+cd client
+npm run build
+
+# Build server
+echo "📦 Preparing server..."
+cd ../server
+npm install --production
+
+# Run database backups
+echo "💾 Creating database backup..."
+npm run backup
+
+# Stop existing containers
+echo "🛑 Stopping existing containers..."
+docker-compose down
+
+# Pull latest images
+echo "📥 Pulling latest images..."
+docker-compose pull
+
+# Start services
+echo "▶️ Starting services..."
+docker-compose up -d
+
+# Run migrations
+echo "🔄 Running database migrations..."
+docker exec proprender-server npm run migrate
+
+# Clear cache
+echo "🗑️ Clearing Redis cache..."
+docker exec proprender-redis redis-cli FLUSHALL
+
+echo "✅ Deployment complete!"
+echo "🌐 Application is now live"

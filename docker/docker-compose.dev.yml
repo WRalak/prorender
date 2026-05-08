@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: proprender-mongo-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: proprender_dev
+    volumes:
+      - mongo_dev_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - proprender-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: proprender-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - proprender-network
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: proprender-server-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/proprender_dev?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev_jwt_secret_key_change_in_production
+      JWT_REFRESH_SECRET: dev_refresh_secret_key_change_in_production
+      CLIENT_URL: http://localhost:3000
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: dev@proprender.com
+      SMTP_PASS: dev_email_password
+      CLOUDINARY_CLOUD_NAME: dev_cloud_name
+      CLOUDINARY_API_KEY: dev_api_key
+      CLOUDINARY_API_SECRET: dev_api_secret
+      MAPBOX_ACCESS_TOKEN: dev_mapbox_token
+      STRIPE_PUBLISHABLE_KEY: dev_stripe_publishable_key
+      STRIPE_SECRET_KEY: dev_stripe_secret_key
+      UPLOAD_MAX_SIZE: 10485760
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    depends_on:
+      - mongodb
+      - redis
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app/server
+      - /app/server/node_modules
+      - ./uploads:/app/uploads
+    networks:
+      - proprender-network
+    command: npm run dev
+
+  client:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+      target: builder
+    container_name: proprender-client-dev
+    restart: unless-stopped
+    environment:
+      REACT_APP_SERVER_URL: http://localhost:5000
+      REACT_APP_MAPBOX_ACCESS_TOKEN: dev_mapbox_token
+      REACT_APP_STRIPE_PUBLISHABLE_KEY: dev_stripe_publishable_key
+      REACT_APP_CLOUDINARY_CLOUD_NAME: dev_cloud_name
+      REACT_APP_CLOUDINARY_UPLOAD_PRESET: dev_upload_preset
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app/client
+      - /app/client/node_modules
+    networks:
+      - proprender-network
+    command: npm start
+
+  nginx:
+    image: nginx:alpine
+    container_name: proprender-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - client
+      - server
+    networks:
+      - proprender-network
+
+  # Development tools
+  mongo-express:
+    image: mongo-express:latest
+    container_name: proprender-mongo-express
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - proprender-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: proprender-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
+    networks:
+      - proprender-network
+
+volumes:
+  mongo_dev_data:
+  redis_dev_data:
+
+networks:
+  proprender-network:
+    driver: bridge
