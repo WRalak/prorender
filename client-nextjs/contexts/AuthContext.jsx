@@ -1,0 +1,142 @@
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+
+  // Set axios defaults if token exists
+  if (token && !axios.defaults.headers.common['Authorization']) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+
+  useEffect(() => {
+    const initializeAuth = () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+        } catch (error) {
+          // Fallback to mock user if parsing fails
+          setUser({ 
+            name: { first: 'User', last: 'Name' }, 
+            email: 'user@example.com',
+            role: 'tenant',
+            subscription: null
+          });
+        }
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
+  }, []);
+
+  const fetchUser = async () => {
+    try {
+      const response = await axios.get('/api/auth/me');
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('Fetch user error:', error);
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post('/api/auth/login', { email, password });
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setToken(token);
+      setUser(user);
+      
+      toast.success(`Welcome back, ${user.name.first}!`);
+      return { success: true, user };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed';
+      toast.error(message);
+      return { success: false, message };
+    }
+  };
+
+  const signup = async (userData) => {
+    try {
+      const response = await axios.post('/api/auth/signup', userData);
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setToken(token);
+      setUser(user);
+      
+      toast.success('Account created! Please verify your email.');
+      return { success: true, user };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Signup failed';
+      toast.error(message);
+      return { success: false, message };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    setToken(null);
+    setUser(null);
+    toast.success('Logged out successfully');
+  };
+
+  const value = {
+    user,
+    loading,
+    isAuthenticated: !!user,
+    login,
+    signup,
+    logout,
+    updateUser: setUser,
+    // Role-based helpers
+    isTenant: user?.role === 'tenant',
+    isAgent: user?.role === 'agent',
+    isAdmin: user?.role === 'admin',
+    isSuperAdmin: user?.role === 'super_admin',
+    hasSubscription: !!user?.subscription,
+    canListProperties: user?.role === 'agent' || user?.role === 'admin' || user?.role === 'super_admin',
+    canManageUsers: user?.role === 'admin' || user?.role === 'super_admin',
+    canManagePlatform: user?.role === 'super_admin',
+    getSubscriptionPlan: () => user?.subscription?.plan || null,
+    getPropertyLimit: () => {
+      const plan = user?.subscription?.plan;
+      if (plan === 'basic') return 10;
+      if (plan === 'pro') return 50;
+      return 0;
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
