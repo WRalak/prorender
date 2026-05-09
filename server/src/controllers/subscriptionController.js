@@ -4,6 +4,50 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const AppError = require('../middleware/errorHandler');
 const { catchAsync } = require('../middleware/errorHandler');
 
+// Plan configurations
+const PLANS = {
+  basic: {
+    id: 'basic',
+    name: 'Basic Agent',
+    price: 4900,
+    currency: 'kes',
+    interval: 'month',
+    features: [
+      'Up to 10 property listings',
+      'Basic analytics dashboard',
+      'Chat with tenants',
+      'Schedule viewings',
+      'Email support',
+      'Basic branding options'
+    ],
+    propertyLimit: 10,
+    stripePriceId: process.env.STRIPE_BASIC_PRICE_ID
+  },
+  pro: {
+    id: 'pro',
+    name: 'Pro Agent',
+    price: 9900,
+    currency: 'kes',
+    interval: 'month',
+    features: [
+      'Up to 50 property listings',
+      'Advanced analytics dashboard',
+      'Chat with tenants (file attachments)',
+      'Schedule viewings + Google Calendar sync',
+      'Priority support',
+      'Advanced branding options',
+      'Lease generation tools',
+      'Rent collection via Stripe'
+    ],
+    propertyLimit: 50,
+    stripePriceId: process.env.STRIPE_PRO_PRICE_ID
+  }
+};
+
+const getPlanDetails = (planId) => {
+  return PLANS[planId];
+};
+
 exports.getCurrentSubscription = catchAsync(async (req, res, next) => {
   const subscription = await Subscription.findOne({
     user: req.user.id,
@@ -37,6 +81,29 @@ exports.getSubscriptionHistory = catchAsync(async (req, res, next) => {
       total,
       pages: Math.ceil(total / limit)
     }
+  });
+});
+
+exports.getAvailablePlans = catchAsync(async (req, res, next) => {
+  res.json({
+    success: true,
+    plans: Object.values(PLANS)
+  });
+});
+
+exports.checkSubscriptionStatus = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  
+  const hasActiveSubscription = user.hasActiveSubscription();
+  const propertyLimit = user.getPropertyLimit();
+  const currentPlan = user.subscription?.plan;
+  
+  res.json({
+    success: true,
+    hasActiveSubscription,
+    currentPlan,
+    propertyLimit,
+    subscription: user.subscription
   });
 });
 

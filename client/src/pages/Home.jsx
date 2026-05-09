@@ -8,6 +8,8 @@ import {
   MagnifyingGlassIcon,
   StarIcon,
   DocumentTextIcon,
+  ChatBubbleLeftRightIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 
 const Home = () => {

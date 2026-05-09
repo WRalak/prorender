@@ -21,13 +21,51 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
   const totalMaintenanceRequests = await MaintenanceRequest.countDocuments();
   const totalActiveUsers = await User.countDocuments({ status: 'active' });
 
+  // Multi-tier stats
+  const totalTenants = await User.countDocuments({ role: 'tenant' });
+  const totalAgents = await User.countDocuments({ role: 'agent' });
+  const totalAdmins = await User.countDocuments({ role: 'admin' });
+  const totalSuperAdmins = await User.countDocuments({ role: 'super_admin' });
+  
+  const activeSubscriptions = await User.countDocuments({
+    'subscription.status': 'active',
+    'subscription.endDate': { $gt: new Date() }
+  });
+  
+  const basicSubscriptions = await User.countDocuments({
+    'subscription.plan': 'basic',
+    'subscription.status': 'active'
+  });
+  
+  const proSubscriptions = await User.countDocuments({
+    'subscription.plan': 'pro',
+    'subscription.status': 'active'
+  });
+
   const stats = {
     users: {
       total: totalUsers,
       active: totalActiveUsers,
+      byRole: {
+        tenants: totalTenants,
+        agents: totalAgents,
+        admins: totalAdmins,
+        superAdmins: totalSuperAdmins
+      },
       newThisMonth: await User.countDocuments({
         createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
       })
+    },
+    subscriptions: {
+      active: activeSubscriptions,
+      byPlan: {
+        basic: basicSubscriptions,
+        pro: proSubscriptions
+      },
+      revenue: {
+        monthly: (basicSubscriptions * 4900) + (proSubscriptions * 9900),
+        commission: ((basicSubscriptions * 4900) + (proSubscriptions * 9900)) * 0.2
+      }
     },
     properties: {
       total: totalProperties,
@@ -1605,46 +1643,201 @@ async function generateCustomReport(parameters) {
   };
 }
 
-// Methods are already exported with exports syntax
+// Multi-tier user management
+exports.getUsersByRole = catchAsync(async (req, res, next) => {
+  const { role, page = 1, limit = 10, status } = req.query;
+  
+  const filter = {};
+  if (role) filter.role = role;
+  if (status) filter.status = status;
+  
+  const users = await User.find(filter)
+    .select('-password')
+    .sort({ createdAt: -1 })
+    .limit(limit * 1)
+    .skip((page - 1) * limit);
+  
+  const total = await User.countDocuments(filter);
+  
+  res.json({
+    success: true,
+    users,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
+});
 
-module.exports = {
-  getDashboard,
-  getStats,
-  getUsers,
-  getUser,
-  updateUser,
-  deleteUser,
-  banUser,
-  unbanUser,
-  getProperties,
-  getProperty,
-  updateProperty,
-  deleteProperty,
-  getApplications,
-  getApplication,
-  updateApplication,
-  getPayments,
-  getPayment,
-  refundPayment,
-  getMaintenanceRequests,
-  getMaintenanceRequest,
-  updateMaintenanceRequest,
-  getReports,
-  getReport,
-  generateReport,
-  deleteReport,
-  getSettings,
-  updateSettings,
-  testEmailSettings,
-  regenerateApiKey,
-  getLogs,
-  getSystemHealth,
-  getNotifications,
-  createNotification,
-  updateNotification,
-  deleteNotification,
-  createBackup,
-  getBackups,
-  restoreBackup,
-  getAnalytics
-};
+exports.updateUserRole = catchAsync(async (req, res, next) => {
+  const { userId } = req.params;
+  const { role, reason } = req.body;
+  
+  const user = await User.findById(userId);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+  
+  // Only super admin can promote to admin
+  if (role === 'admin' || role === 'super_admin') {
+    if (!req.user.isSuperAdmin()) {
+      return next(new AppError('Only super admin can promote users to admin roles', 403));
+    }
+  }
+  
+  const oldRole = user.role;
+  user.role = role;
+  user.metadata.approvedBy = req.user.id;
+  user.metadata.approvedAt = new Date();
+  user.metadata.approvalNotes = reason;
+  
+  await user.save();
+  
+  // Create audit log
+  await AuditLog.create({
+    user: req.user.id,
+    action: 'role_change',
+    targetUser: userId,
+    details: {
+      oldRole,
+      newRole: role,
+      reason
+    },
+    ipAddress: req.ip
+  });
+  
+  res.json({
+    success: true,
+    message: `User role updated to ${role}`,
+    user
+  });
+});
+
+exports.getRevenueReport = catchAsync(async (req, res, next) => {
+  const { startDate, endDate, groupBy = 'month' } = req.query;
+  
+  const matchStage = {
+    'subscription.status': 'active',
+    'subscription.endDate': { $gt: new Date() }
+  };
+  
+  if (startDate && endDate) {
+    matchStage['subscription.startDate'] = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate)
+    };
+  }
+  
+  const revenueData = await User.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$subscription.startDate' },
+          month: groupBy === 'month' ? { $month: '$subscription.startDate' } : null,
+          day: groupBy === 'day' ? { $dayOfMonth: '$subscription.startDate' } : null
+        },
+        basicSubscriptions: {
+          $sum: { $cond: [{ $eq: ['$subscription.plan', 'basic'] }, 1, 0] }
+        },
+        proSubscriptions: {
+          $sum: { $cond: [{ $eq: ['$subscription.plan', 'pro'] }, 1, 0] }
+        },
+        revenue: {
+          $sum: {
+            $cond: [
+              { $eq: ['$subscription.plan', 'basic'] },
+              4900,
+              9900
+            ]
+          }
+        },
+        commission: {
+          $sum: {
+            $multiply: [
+              {
+                $cond: [
+                  { $eq: ['$subscription.plan', 'basic'] },
+                  4900,
+                  9900
+                ]
+              },
+              0.2
+            ]
+          }
+        }
+      }
+    },
+    { $sort: { '_id.year': -1, '_id.month': -1, '_id.day': -1 } }
+  ]);
+  
+  res.json({
+    success: true,
+    revenueData
+  });
+});
+
+exports.getAgentLeaderboard = catchAsync(async (req, res, next) => {
+  const { period = 'month', limit = 10 } = req.query;
+  
+  let dateFilter;
+  if (period === 'month') {
+    dateFilter = { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) };
+  } else if (period === 'year') {
+    dateFilter = { $gte: new Date(new Date().getFullYear(), 0, 1) };
+  } else {
+    dateFilter = { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) };
+  }
+  
+  const leaderboard = await User.aggregate([
+    { $match: { role: 'agent', status: 'active' } },
+    {
+      $lookup: {
+        from: 'properties',
+        localField: '_id',
+        foreignField: 'owner',
+        as: 'properties'
+      }
+    },
+    {
+      $lookup: {
+        from: 'applications',
+        let: { agentId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$agent', '$$agentId'] } } },
+          { $match: { createdAt: dateFilter } }
+        ],
+        as: 'applications'
+      }
+    },
+    {
+      $project: {
+        name: 1,
+        email: 1,
+        'subscription.plan': 1,
+        propertyCount: { $size: '$properties' },
+        applicationCount: { $size: '$applications' },
+        totalRevenue: {
+          $sum: {
+            $map: {
+              input: '$applications',
+              as: 'app',
+              in: '$app.rent'
+            }
+          }
+        }
+      }
+    },
+    { $sort: { totalRevenue: -1, applicationCount: -1, propertyCount: -1 } },
+    { $limit: parseInt(limit) }
+  ]);
+  
+  res.json({
+    success: true,
+    leaderboard
+  });
+});
+
+// Methods are already exported with exports syntax

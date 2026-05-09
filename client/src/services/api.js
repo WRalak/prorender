@@ -226,4 +226,108 @@ export const adminAPI = {
   backupDatabase: () => api.post('/admin/backup'),
 };
 
+// AI Moderation API
+export const moderationAPI = {
+  moderateContent: (content) => api.post('/moderation/content', { content }),
+  moderateProperty: (propertyData) => api.post('/moderation/property', propertyData),
+  moderateMessage: (messageContent, senderId, receiverId) => api.post('/moderation/message', { messageContent, senderId, receiverId }),
+  moderateUser: (userData) => api.post('/moderation/user', userData),
+  moderateBulk: (items, itemType) => api.post('/moderation/bulk', { items, itemType }),
+  getModerationStats: (timeRange) => api.get(`/moderation/stats?timeRange=${timeRange}`),
+  reviewFlaggedContent: (contentId, action, reviewerId) => api.post('/moderation/review', { contentId, action, reviewerId }),
+  updateModerationRules: (rules) => api.post('/moderation/rules', rules),
+  filterContent: (filters) => api.post('/moderation/filter', filters),
+};
+
+// Audit Service API
+export const auditAPI = {
+  getLogs: (filters) => api.get('/audit/logs', filters),
+  getStats: (timeRange) => api.get(`/audit/stats?timeRange=${timeRange}`),
+  getUserActivity: (userId, timeRange) => api.get(`/audit/users/${userId}/activity?timeRange=${timeRange}`),
+  logSecurityEvent: (event) => api.post('/audit/security', event),
+  logDataAccess: (userId, resource, action, details) => api.post('/audit/data-access', { userId, resource, action, details }),
+  logSystemEvent: (event, details) => api.post('/audit/system', { event, details }),
+  generateComplianceReport: (reportType, dateRange) => api.post('/audit/compliance', { reportType, dateRange }),
+  exportAuditData: (filters) => api.post('/audit/export', filters),
+};
+
+// Backup Service API
+export const backupAPI = {
+  createBackup: (options) => api.post('/backup/create', options),
+  restoreDatabase: (backupId, options) => api.post('/backup/restore', { backupId, options }),
+  getBackupHistory: () => api.get('/backup/history'),
+  scheduleBackup: (options) => api.post('/backup/schedule', options),
+  cleanupOldBackups: (retentionDays) => api.post('/backup/cleanup', { retentionDays }),
+  downloadBackup: (backupId) => api.get(`/backup/download/${backupId}`),
+  verifyBackup: (backupId) => api.post('/backup/verify', { backupId }),
+  getBackupStats: () => api.get('/backup/stats'),
+  exportBackupConfig: () => api.get('/backup/config'),
+  testBackup: () => api.post('/backup/test'),
+};
+
+// Calendar Service API
+export const calendarAPI = {
+  getUserCalendar: (userId, filters) => api.get(`/calendar/${userId}`, filters),
+  createCalendarEvent: (userId, eventData) => api.post(`/calendar/${userId}`, eventData),
+  updateCalendarEvent: (eventId, userId, updates) => api.patch(`/calendar/${eventId}`, { userId, updates }),
+  deleteCalendarEvent: (eventId, userId) => api.delete(`/calendar/${eventId}?userId=${userId}`),
+  getAvailability: (userId, startDate, endDate) => api.get(`/calendar/${userId}/availability`, { startDate, endDate }),
+  scheduleViewing: (propertyId, userId, viewingData) => api.post(`/calendar/viewing/${propertyId}`, { userId, ...viewingData }),
+  getViewingSchedule: (userId, filters) => api.get(`/calendar/${userId}/viewings`, filters),
+  syncExternalCalendar: (userId, calendarConfig) => api.post(`/calendar/${userId}/sync`, calendarConfig),
+  getCalendarStats: (userId, timeRange) => api.get(`/calendar/${userId}/stats?timeRange=${timeRange}`),
+  setReminder: (eventId, userId, reminderData) => api.post(`/calendar/${eventId}/reminder`, { userId, ...reminderData }),
+  exportCalendarData: (userId, format, filters) => api.get(`/calendar/${userId}/export`, { format, ...filters }),
+};
+
+// Notification Service API
+export const notificationAPI = {
+  sendNotification: (userId, notificationData) => api.post(`/notifications/${userId}`, notificationData),
+  sendBulkNotifications: (notifications) => api.post('/notifications/bulk', { notifications }),
+  getUserNotifications: (userId, filters) => api.get(`/notifications/${userId}`, filters),
+  markAsRead: (notificationId, userId) => api.patch(`/notifications/${notificationId}/read`, { userId }),
+  markAllAsRead: (userId) => api.patch(`/notifications/${userId}/read-all`),
+  deleteNotification: (notificationId, userId) => api.delete(`/notifications/${notificationId}?userId=${userId}`),
+  getNotificationPreferences: (userId) => api.get(`/notifications/${userId}/preferences`),
+  updateNotificationPreferences: (userId, preferences) => api.patch(`/notifications/${userId}/preferences`, preferences),
+  getNotificationStats: (userId, timeRange) => api.get(`/notifications/${userId}/stats?timeRange=${timeRange}`),
+  createNotificationTemplate: (templateData) => api.post('/notifications/templates', templateData),
+  getNotificationTemplates: (filters) => api.get('/notifications/templates', filters),
+  scheduleNotification: (userId, notificationData, scheduleData) => api.post(`/notifications/${userId}/schedule`, { notificationData, scheduleData }),
+  cancelScheduledNotification: (notificationId, userId) => api.delete(`/notifications/${notificationId}/schedule?userId=${userId}`),
+  getScheduledNotifications: (userId, filters) => api.get(`/notifications/${userId}/scheduled`, filters),
+};
+
+// Enhanced Payment Service API
+export const paymentServiceAPI = {
+  processPayment: (paymentData) => api.post('/payments/process', paymentData),
+  getPaymentById: (paymentId) => api.get(`/payments/${paymentId}`),
+  getUserPayments: (userId, filters) => api.get(`/payments/user/${userId}`, filters),
+  updatePaymentStatus: (paymentId, status, metadata) => api.patch(`/payments/${paymentId}/status`, { status, metadata }),
+  refundPayment: (paymentId, refundData) => api.post(`/payments/${paymentId}/refund`, refundData),
+  getPaymentStats: (filters) => api.get('/payments/stats', filters),
+  createPaymentIntent: (paymentData) => api.post('/payments/intent', paymentData),
+  confirmPaymentIntent: (paymentIntentId, paymentData) => api.post(`/payments/intent/${paymentIntentId}/confirm`, paymentData),
+  getPaymentMethods: () => api.get('/payments/methods'),
+  getPaymentHistory: (userId, filters) => api.get(`/payments/history/${userId}`, filters),
+  exportPaymentData: (userId, format, filters) => api.get(`/payments/export/${userId}`, { format, ...filters }),
+  handleWebhook: (webhookData, provider) => api.post('/payments/webhook', { webhookData, provider }),
+};
+
+// Health Check API
+export const healthAPI = {
+  getHealth: () => api.get('/health'),
+  getServerInfo: () => api.get('/test'),
+};
+
+// Search API (enhanced)
+export const searchAPI = {
+  searchProperties: (params) => api.post('/search/properties', params),
+  getSearchFilters: () => api.get('/search/filters'),
+  getSearchSuggestions: (query) => api.get(`/search/suggestions?q=${query}`),
+  saveSearch: (userId, searchData) => api.post(`/search/save/${userId}`, searchData),
+  getSavedSearches: (userId) => api.get(`/search/saved/${userId}`),
+  deleteSavedSearch: (userId, searchId) => api.delete(`/search/saved/${userId}/${searchId}`),
+};
+
 export default api;

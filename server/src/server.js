@@ -28,7 +28,10 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 1000,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
@@ -44,7 +47,7 @@ app.use('/api/spaces', require('./routes/spaceRoutes'));
 app.use('/api/leases', require('./routes/leaseRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
-app.use('/api/super-admin', require('./routes/superAdminRoutes'));
+// app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
 
@@ -66,8 +69,19 @@ app.get('/api/users/notifications', (req, res) => {
   });
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    version: process.version
+  });
+});
+
 // Database connection
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/prorender', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('✅ MongoDB connected'))

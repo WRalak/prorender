@@ -441,6 +441,130 @@ exports.getSearchSuggestions = catchAsync(async (req, res, next) => {
   });
 });
 
+// Get available filters
+exports.getAvailableFilters = catchAsync(async (req, res, next) => {
+  const filters = {
+    propertyTypes: ['apartment', 'house', 'condo', 'townhouse', 'studio', 'loft', 'villa'],
+    priceRanges: [
+      { label: 'Under $1000', min: 0, max: 1000 },
+      { label: '$1000-$2000', min: 1000, max: 2000 },
+      { label: '$2000-$3000', min: 2000, max: 3000 },
+      { label: '$3000-$5000', min: 3000, max: 5000 },
+      { label: '$5000+', min: 5000, max: 10000 }
+    ],
+    bedroomCounts: [1, 2, 3, 4, 5],
+    bathroomCounts: [1, 2, 3, 4],
+    amenities: [
+      'parking', 'gym', 'pool', 'air_conditioning', 'heating',
+      'laundry', 'furnished', 'pet_friendly', 'elevator', 'balcony'
+    ],
+    cities: await Property.distinct('address.city').sort(),
+    states: await Property.distinct('address.state').sort()
+  };
+
+  res.json({
+    success: true,
+    filters
+  });
+});
+
+// Advanced property search
+exports.advancedPropertySearch = catchAsync(async (req, res, next) => {
+  const filters = req.body;
+  const { page = 1, limit = 20 } = req.query;
+  
+  const query = {};
+  
+  // Build query from filters
+  if (filters.type) query.type = filters.type;
+  if (filters.priceRange) {
+    if (filters.priceRange.min) query.price = { $gte: filters.priceRange.min };
+    if (filters.priceRange.max) query.price = { ...query.price, $lte: filters.priceRange.max };
+  }
+  if (filters.bedrooms) query.bedrooms = filters.bedrooms;
+  if (filters.bathrooms) query.bathrooms = filters.bathrooms;
+  if (filters.amenities && filters.amenities.length > 0) {
+    query.amenities = { $all: filters.amenities };
+  }
+  if (filters.city) query['address.city'] = filters.city;
+  if (filters.state) query['address.state'] = filters.state;
+  
+  const skip = (page - 1) * limit;
+  
+  const properties = await Property.find(query)
+    .populate('owner', 'name email')
+    .limit(limit)
+    .skip(skip)
+    .sort({ createdAt: -1 });
+    
+  const total = await Property.countDocuments(query);
+  
+  res.json({
+    success: true,
+    properties,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
+});
+
+// Map-based property search
+exports.mapSearch = catchAsync(async (req, res, next) => {
+  const {
+    ne_lat, ne_lng, sw_lat, sw_lng,
+    propertyTypes,
+    minPrice,
+    maxPrice,
+    page = 1,
+    limit = 50
+  } = req.query;
+  
+  const query = {
+    'address.coordinates': {
+      $geoWithin: {
+        $box: [
+          [parseFloat(sw_lng), parseFloat(sw_lat)],
+          [parseFloat(ne_lng), parseFloat(ne_lat)]
+        ]
+      }
+    }
+  };
+  
+  if (propertyTypes) {
+    const types = Array.isArray(propertyTypes) ? propertyTypes : [propertyTypes];
+    query.type = { $in: types };
+  }
+  
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = parseFloat(minPrice);
+    if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+  }
+  
+  const skip = (page - 1) * limit;
+  
+  const properties = await Property.find(query)
+    .select('title type price address coordinates images')
+    .limit(limit)
+    .skip(skip);
+    
+  const total = await Property.countDocuments(query);
+  
+  res.json({
+    success: true,
+    properties,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
+});
+
 // Get popular search terms
 exports.getPopularSearches = catchAsync(async (req, res, next) => {
   // In a real implementation, you would track search queries in analytics

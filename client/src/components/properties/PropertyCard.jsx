@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   HomeIcon,
@@ -16,8 +16,8 @@ const PropertyCard = ({ property }) => {
   const queryClient = useQueryClient();
   const [isFavorited, setIsFavorited] = useState(property.isFavorited || false);
 
-  const favoriteMutation = useMutation(
-    async () => {
+  const favoriteMutation = useMutation({
+    mutationFn: async () => {
       const method = isFavorited ? 'DELETE' : 'POST';
       const response = await fetch(`/api/properties/${property._id}/favorite`, {
         method,
@@ -32,17 +32,15 @@ const PropertyCard = ({ property }) => {
       
       return response.json();
     },
-    {
-      onSuccess: () => {
-        setIsFavorited(!isFavorited);
-        toast.success(isFavorited ? 'Removed from favorites' : 'Added to favorites');
-        queryClient.invalidateQueries('favorites');
-      },
-      onError: () => {
-        toast.error('Failed to update favorite status');
-      },
-    }
-  );
+    onSuccess: () => {
+      setIsFavorited(!isFavorited);
+      toast.success(isFavorited ? 'Removed from favorites' : 'Added to favorites');
+      queryClient.invalidateQueries('favorites');
+    },
+    onError: () => {
+      toast.error('Failed to update favorite status');
+    },
+  });
 
   const handleFavoriteClick = (e) => {
     e.preventDefault();

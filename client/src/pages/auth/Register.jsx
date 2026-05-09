@@ -19,8 +19,8 @@ const Register = () => {
     formState: { errors },
   } = useForm();
 
-  const registerMutation = useMutation(
-    async (data) => {
+  const registerMutation = useMutation({
+    mutationFn: async (data) => {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -36,17 +36,15 @@ const Register = () => {
       
       return response.json();
     },
-    {
-      onSuccess: (data) => {
-        login(data.token, data.user);
-        toast.success('Registration successful! Please check your email to verify your account.');
-        navigate('/dashboard');
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Registration failed');
-      },
-    }
-  );
+    onSuccess: (data) => {
+      login(data.token, data.user);
+      toast.success('Registration successful! Please check your email to verify your account.');
+      navigate('/dashboard');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Registration failed');
+    },
+  });
 
   const onSubmit = (data) => {
     if (data.password !== data.confirmPassword) {

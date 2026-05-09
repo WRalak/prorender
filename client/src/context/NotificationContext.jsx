@@ -17,13 +17,22 @@ export const NotificationProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch notifications
+  // Check if user is authenticated by checking token
+  const isAuthenticated = !!localStorage.getItem('token');
+
+  // Fetch notifications only if user is authenticated
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: userAPI.getNotifications,
+    enabled: isAuthenticated, // Only run query if user is authenticated
     onSuccess: (data) => {
       const unread = data.notifications?.filter(n => !n.read).length || 0;
       setUnreadCount(unread);
+    },
+    onError: () => {
+      // If notifications fail, clear token and set user to null
+      localStorage.removeItem('token');
+      setUnreadCount(0);
     },
   });
 

@@ -56,7 +56,6 @@ router.post('/settings/regenerate-api-key', auditLog('admin_regenerate_api'), ad
 
 // Logs and monitoring
 router.get('/logs', auditLog('admin_logs_view'), adminController.getLogs);
-router.get('/logs/:type', auditLog('admin_logs_filtered'), adminController.getLogsByType);
 router.get('/system-health', auditLog('admin_system_health'), adminController.getSystemHealth);
 
 // Notifications

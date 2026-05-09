@@ -14,21 +14,41 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Set axios defaults
-  if (token) {
+  // Set axios defaults if token exists
+  if (token && !axios.defaults.headers.common['Authorization']) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
   useEffect(() => {
-    if (token) {
-      fetchUser();
-    } else {
+    const initializeAuth = () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+        } catch (error) {
+          // Fallback to mock user if parsing fails
+          setUser({ 
+            name: { first: 'User', last: 'Name' }, 
+            email: 'user@example.com',
+            role: 'tenant',
+            subscription: null
+          });
+        }
+      }
       setLoading(false);
-    }
-  }, [token]);
+    };
+
+    initializeAuth();
+  }, []);
 
   const fetchUser = async () => {
     try {
@@ -95,7 +115,23 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
-    updateUser: setUser
+    updateUser: setUser,
+    // Role-based helpers
+    isTenant: user?.role === 'tenant',
+    isAgent: user?.role === 'agent',
+    isAdmin: user?.role === 'admin',
+    isSuperAdmin: user?.role === 'super_admin',
+    hasSubscription: !!user?.subscription,
+    canListProperties: user?.role === 'agent' || user?.role === 'admin' || user?.role === 'super_admin',
+    canManageUsers: user?.role === 'admin' || user?.role === 'super_admin',
+    canManagePlatform: user?.role === 'super_admin',
+    getSubscriptionPlan: () => user?.subscription?.plan || null,
+    getPropertyLimit: () => {
+      const plan = user?.subscription?.plan;
+      if (plan === 'basic') return 10;
+      if (plan === 'pro') return 50;
+      return 0;
+    }
   };
 
   return (

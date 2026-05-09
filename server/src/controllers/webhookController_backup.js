@@ -241,3 +241,11 @@ async function handleCloudinaryResourceDeleted(resource) {
   console.log('Cloudinary resource deleted:', resource);
   // TODO: Update file records
 }
+
+module.exports = {
+  handleStripeWebhook,
+  handleDocuSignWebhook,
+  handleEmailWebhook,
+  handleCloudinaryWebhook,
+  handleCustomWebhook
+};

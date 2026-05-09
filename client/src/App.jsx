@@ -5,8 +5,8 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
-import PrivateRoute from './routes/PrivateRoute';
 import AppRoutes from './routes/AppRoutes';
+import ServiceTestNav from './components/ServiceTestNav';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +50,7 @@ function App() {
                 }}
               />
               <AppRoutes />
+              <ServiceTestNav />
             </NotificationProvider>
           </SocketProvider>
         </AuthProvider>

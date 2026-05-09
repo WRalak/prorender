@@ -20,8 +20,8 @@ const Login = () => {
     formState: { errors },
   } = useForm();
 
-  const loginMutation = useMutation(
-    async (data) => {
+  const loginMutation = useMutation({
+    mutationFn: async (data) => {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -37,17 +37,15 @@ const Login = () => {
       
       return response.json();
     },
-    {
-      onSuccess: (data) => {
-        login(data.token, data.user);
-        toast.success('Welcome back!');
-        navigate(from, { replace: true });
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Invalid credentials');
-      },
-    }
-  );
+    onSuccess: (data) => {
+      login(data.token, data.user);
+      toast.success('Welcome back!');
+      navigate(from, { replace: true });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Invalid credentials');
+    },
+  });
 
   const onSubmit = (data) => {
     loginMutation.mutate(data);

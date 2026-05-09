@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BuildingOfficeIcon, EnvelopeIcon, PhoneIcon, MapPinIcon, FacebookIcon, TwitterIcon, InstagramIcon, LinkedinIcon } from '@heroicons/react/24/outline';
+import { BuildingOfficeIcon, EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -31,16 +31,14 @@ const Footer = () => {
       { name: 'Terms of Use', href: '/terms' },
       { name: 'Privacy Policy', href: '/privacy' },
       { name: 'Cookie Policy', href: '/cookies' },
-      { name: 'GDPR', href: '/gdpr' },
-      { name: 'Accessibility', href: '/accessibility' },
     ],
   };
 
   const socialLinks = [
-    { name: 'Facebook', href: 'https://facebook.com/prorender', icon: FacebookIcon },
-    { name: 'Twitter', href: 'https://twitter.com/prorender', icon: TwitterIcon },
-    { name: 'Instagram', href: 'https://instagram.com/prorender', icon: InstagramIcon },
-    { name: 'LinkedIn', href: 'https://linkedin.com/company/prorender', icon: LinkedinIcon },
+    { name: 'Facebook', href: 'https://facebook.com/prorender' },
+    { name: 'Twitter', href: 'https://twitter.com/prorender' },
+    { name: 'Instagram', href: 'https://instagram.com/prorender' },
+    { name: 'LinkedIn', href: 'https://linkedin.com/company/prorender' },
   ];
 
   return (
@@ -66,10 +64,10 @@ const Footer = () => {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
                   aria-label={social.name}
                 >
-                  <social.icon className="h-5 w-5" />
+                  {social.name}
                 </a>
               ))}
             </div>

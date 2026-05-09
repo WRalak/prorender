@@ -15,6 +15,10 @@ router.patch('/update', auditLog('subscription_update'), subscriptionController.
 router.post('/cancel', auditLog('subscription_cancel'), subscriptionController.cancelSubscription);
 router.post('/reactivate', auditLog('subscription_reactivate'), subscriptionController.reactivateSubscription);
 
+// Multi-tier subscription features
+router.get('/status', auditLog('subscription_status'), subscriptionController.checkSubscriptionStatus);
+router.get('/available-plans', auditLog('subscription_available_plans'), subscriptionController.getAvailablePlans);
+
 // Plan management
 router.get('/plans', auditLog('subscription_plans'), subscriptionController.getPlans);
 router.get('/plans/:id', auditLog('subscription_plan_view'), subscriptionController.getPlan);

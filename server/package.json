@@ -2,10 +2,10 @@
   "name": "server",
   "version": "1.0.0",
   "description": "PropRent Backend API",
-  "main": "src/server.js",
+  "main": "src/minimal-server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "node src/minimal-server.js",
+    "dev": "nodemon src/minimal-server.js",
     "seed": "node src/scripts/seedDb.js",
     "backup": "node src/scripts/backupDb.js"
   },

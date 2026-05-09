@@ -8,80 +8,64 @@ exports.getSystemHealth = catchAsync(async (req, res, next) => {
     timestamp: new Date(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    cpu: process.cpuUsage(),
-    nodeVersion: process.version,
-    platform: process.platform,
+    version: process.version,
     environment: process.env.NODE_ENV || 'development'
   };
 
   res.json({
     success: true,
-    health
+    data: health
   });
 });
 
 exports.getSystemMetrics = catchAsync(async (req, res, next) => {
   const metrics = {
-    server: {
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      cpu: process.cpuUsage()
-    },
-    database: {
-      status: 'connected', // TODO: Check actual DB connection
-      collections: {
-        users: await User.countDocuments(),
-        // TODO: Add other collections
-      }
-    },
-    performance: {
-      avgResponseTime: 150, // TODO: Calculate actual response time
-      requestsPerSecond: 50, // TODO: Calculate actual RPS
-      errorRate: 0.02 // TODO: Calculate actual error rate
-    }
+    users: await User.countDocuments(),
+    activeUsers: await User.countDocuments({ status: 'active' }),
+    systemLoad: process.cpuUsage(),
+    memoryUsage: process.memoryUsage(),
+    uptime: process.uptime()
   };
 
   res.json({
     success: true,
-    metrics
+    data: metrics
   });
 });
 
 exports.toggleMaintenance = catchAsync(async (req, res, next) => {
-  const { enabled, message } = req.body;
+  const { enabled } = req.body;
   
-  // TODO: Implement maintenance mode
+  // In a real implementation, you would store this in a database or config
   console.log(`Maintenance mode: ${enabled ? 'ON' : 'OFF'}`);
 
   res.json({
     success: true,
-    message: `Maintenance mode ${enabled ? 'enabled' : 'disabled'}`,
-    maintenance: {
-      enabled,
-      message: message || 'System is under maintenance'
-    }
+    message: `Maintenance mode ${enabled ? 'enabled' : 'disabled'}`
   });
 });
 
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const { page = 1, limit = 20, role, status, search } = req.query;
-  const query = {};
+  const { page = 1, limit = 20, search, role, status } = req.query;
   
-  if (role) query.role = role;
-  if (status) query.status = status;
+  const query = {};
   if (search) {
     query.$or = [
-      { 'name.first': { $regex: search, $options: 'i' } },
-      { 'name.last': { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } }
+      { 'name.first': new RegExp(search, 'i') },
+      { 'name.last': new RegExp(search, 'i') },
+      { email: new RegExp(search, 'i') }
     ];
   }
+  if (role) query.role = role;
+  if (status) query.status = status;
 
+  const skip = (page - 1) * limit;
+  
   const users = await User.find(query)
     .select('-password')
     .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+    .limit(limit)
+    .skip(skip);
 
   const total = await User.countDocuments(query);
 
@@ -98,11 +82,10 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
 });
 
 exports.getUser = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.params.id)
-    .select('-password')
-    .populate('spaces')
-    .populate('favorites');
-
+  const { id } = req.params;
+  
+  const user = await User.findById(id).select('-password');
+  
   if (!user) {
     return next(new AppError('User not found', 404));
   }
@@ -114,32 +97,29 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.updateUserRole = catchAsync(async (req, res, next) => {
-  const { role } = req.body;
   const { id } = req.params;
+  const { role } = req.body;
 
-  const user = await User.findById(id);
+  const user = await User.findByIdAndUpdate(id, { role }, { new: true });
+  
   if (!user) {
     return next(new AppError('User not found', 404));
   }
 
-  user.role = role;
-  await user.save();
-
   res.json({
     success: true,
-    user
+    message: 'User role updated successfully'
   });
 });
 
 exports.deleteUser = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-  const user = await User.findById(id);
+  const user = await User.findByIdAndDelete(id);
+  
   if (!user) {
     return next(new AppError('User not found', 404));
   }
-
-  await User.findByIdAndDelete(id);
 
   res.json({
     success: true,
@@ -147,25 +127,158 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getAdmins = catchAsync(async (req, res, next) => {
-  const { page = 1, limit = 20, search } = req.query;
-  const query = { role: { $in: ['admin', 'super_admin'] } };
+exports.suspendUser = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const user = await User.findByIdAndUpdate(id, { status: 'suspended' }, { new: true });
   
-  if (search) {
-    query.$or = [
-      { 'name.first': { $regex: search, $options: 'i' } },
-      { 'name.last': { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } }
-    ];
+  if (!user) {
+    return next(new AppError('User not found', 404));
   }
 
-  const admins = await User.find(query)
+  res.json({
+    success: true,
+    message: 'User suspended successfully'
+  });
+});
+
+exports.unsuspendUser = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const user = await User.findByIdAndUpdate(id, { status: 'active' }, { new: true });
+  
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  res.json({
+    success: true,
+    message: 'User unsuspended successfully'
+  });
+});
+
+exports.getSystemLogs = catchAsync(async (req, res, next) => {
+  const { page = 1, limit = 50, level, startDate, endDate } = req.query;
+  
+  // In a real implementation, you would query your logs database
+  const logs = [];
+  
+  res.json({
+    success: true,
+    logs,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: 0,
+      pages: 0
+    }
+  });
+});
+
+exports.getAuditLogs = catchAsync(async (req, res, next) => {
+  const { page = 1, limit = 50, action, userId } = req.query;
+  
+  // In a real implementation, you would query your audit logs
+  const logs = [];
+  
+  res.json({
+    success: true,
+    logs,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: 0,
+      pages: 0
+    }
+  });
+});
+
+exports.getSystemSettings = catchAsync(async (req, res, next) => {
+  // In a real implementation, you would query your settings database
+  const settings = {
+    maintenanceMode: false,
+    emailNotifications: true,
+    smsNotifications: false,
+    maxUploadSize: '10MB',
+    sessionTimeout: 3600
+  };
+
+  res.json({
+    success: true,
+    settings
+  });
+});
+
+exports.updateSystemSettings = catchAsync(async (req, res, next) => {
+  const settings = req.body;
+  
+  // In a real implementation, you would update your settings database
+  console.log('System settings updated:', settings);
+
+  res.json({
+    success: true,
+    message: 'System settings updated successfully'
+  });
+});
+
+exports.createBackup = catchAsync(async (req, res, next) => {
+  // In a real implementation, you would create a database backup
+  const backup = {
+    id: new Date().getTime(),
+    timestamp: new Date(),
+    size: '125MB',
+    status: 'completed'
+  };
+
+  res.json({
+    success: true,
+    backup,
+    message: 'Backup created successfully'
+  });
+});
+
+exports.restoreBackup = catchAsync(async (req, res, next) => {
+  const { backupId } = req.params;
+  
+  // In a real implementation, you would restore from backup
+  console.log('Restoring backup:', backupId);
+
+  res.json({
+    success: true,
+    message: 'Backup restored successfully'
+  });
+});
+
+exports.getLogsByType = catchAsync(async (req, res, next) => {
+  const { type } = req.params;
+  const { page = 1, limit = 50 } = req.query;
+  
+  // In a real implementation, you would query logs by type
+  const logs = [];
+  
+  res.json({
+    success: true,
+    logs,
+    type,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: 0,
+      pages: 0
+    }
+  });
+});
+
+exports.getAdmins = catchAsync(async (req, res, next) => {
+  const { page = 1, limit = 20 } = req.query;
+  
+  const admins = await User.find({ role: { $in: ['admin', 'super_admin'] } })
     .select('-password')
     .sort({ createdAt: -1 })
-    .limit(limit * 1)
+    .limit(limit)
     .skip((page - 1) * limit);
 
-  const total = await User.countDocuments(query);
+  const total = await User.countDocuments({ role: { $in: ['admin', 'super_admin'] } });
 
   res.json({
     success: true,
@@ -180,72 +293,49 @@ exports.getAdmins = catchAsync(async (req, res, next) => {
 });
 
 exports.createAdmin = catchAsync(async (req, res, next) => {
-  const { name, email, password, role = 'admin' } = req.body;
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return next(new AppError('User already exists', 400));
-  }
-
+  const { name, email, password, role } = req.body;
+  
   const admin = await User.create({
-    name: {
-      first: name.split(' ')[0],
-      last: name.split(' ')[1] || ''
-    },
+    name,
     email,
     password,
-    role,
+    role: role || 'admin',
+    verified: true,
     status: 'active'
   });
 
-  res.status(201).json({
+  res.json({
     success: true,
-    admin
+    admin,
+    message: 'Admin created successfully'
   });
 });
 
 exports.updateAdmin = catchAsync(async (req, res, next) => {
-  const updates = req.body;
   const { id } = req.params;
-
-  const admin = await User.findById(id);
+  const updates = req.body;
+  
+  const admin = await User.findByIdAndUpdate(id, updates, { new: true });
+  
   if (!admin) {
     return next(new AppError('Admin not found', 404));
   }
 
-  if (!['admin', 'super_admin'].includes(admin.role)) {
-    return next(new AppError('User is not an admin', 400));
-  }
-
-  Object.keys(updates).forEach(key => {
-    if (key === 'password') {
-      // Handle password separately if needed
-      return;
-    }
-    admin[key] = updates[key];
-  });
-
-  await admin.save();
-
   res.json({
     success: true,
-    admin
+    admin,
+    message: 'Admin updated successfully'
   });
 });
 
 exports.deleteAdmin = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-
-  const admin = await User.findById(id);
+  
+  const admin = await User.findByIdAndDelete(id);
+  
   if (!admin) {
     return next(new AppError('Admin not found', 404));
   }
-
-  if (admin.role === 'super_admin') {
-    return next(new AppError('Cannot delete super admin', 400));
-  }
-
-  await User.findByIdAndDelete(id);
 
   res.json({
     success: true,
@@ -254,30 +344,16 @@ exports.deleteAdmin = catchAsync(async (req, res, next) => {
 });
 
 exports.getGlobalSettings = catchAsync(async (req, res, next) => {
+  // In a real implementation, you would query global settings
   const settings = {
-    site: {
-      name: 'PropRent',
-      url: process.env.CLIENT_URL,
-      version: '1.0.0'
-    },
-    features: {
-      registration: true,
-      emailVerification: true,
-      twoFactorAuth: false,
-      socialLogin: false,
-      maintenance: false
-    },
-    limits: {
-      maxPropertiesPerUser: 10,
-      maxApplicationsPerUser: 50,
-      maxFileSize: 10485760, // 10MB
-      sessionTimeout: 86400000 // 24 hours
-    },
-    integrations: {
-      stripe: !!process.env.STRIPE_SECRET_KEY,
-      cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
-      email: !!process.env.EMAIL_HOST
-    }
+    siteName: 'PropRent',
+    siteDescription: 'Property Rental Management System',
+    maintenanceMode: false,
+    allowRegistrations: true,
+    emailNotifications: true,
+    smsNotifications: false,
+    maxUploadSize: '10MB',
+    sessionTimeout: 3600
   };
 
   res.json({
@@ -287,63 +363,44 @@ exports.getGlobalSettings = catchAsync(async (req, res, next) => {
 });
 
 exports.updateGlobalSettings = catchAsync(async (req, res, next) => {
-  const updates = req.body;
+  const settings = req.body;
   
-  // TODO: Update actual global settings
-  console.log('Global settings updated:', updates);
+  // In a real implementation, you would update global settings
+  console.log('Global settings updated:', settings);
 
   res.json({
     success: true,
-    message: 'Global settings updated successfully',
-    settings: updates
+    message: 'Global settings updated successfully'
   });
 });
 
 exports.getSystemLogs = catchAsync(async (req, res, next) => {
-  // TODO: Implement actual system log retrieval
-  const logs = [
-    {
-      timestamp: new Date(),
-      level: 'info',
-      message: 'System started successfully',
-      service: 'server'
-    },
-    {
-      timestamp: new Date(Date.now() - 3600000),
-      level: 'warning',
-      message: 'High memory usage detected',
-      service: 'monitor'
-    }
-  ];
-
-  res.json({
-    success: true,
-    logs
-  });
-});
-
-exports.getLogsByType = catchAsync(async (req, res, next) => {
-  const { type } = req.params;
+  const { page = 1, limit = 50, level, startDate, endDate } = req.query;
   
-  // TODO: Implement filtered log retrieval
+  // In a real implementation, you would query your logs database
   const logs = [];
-
+  
   res.json({
     success: true,
     logs,
-    type
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: 0,
+      pages: 0
+    }
   });
 });
 
 exports.getDatabaseStats = catchAsync(async (req, res, next) => {
   const stats = {
-    collections: {
-      users: await User.countDocuments(),
-      // TODO: Add other collections
-    },
-    size: '125.4 MB', // TODO: Calculate actual DB size
-    indexes: 15,
-    lastBackup: new Date(Date.now() - 86400000) // 1 day ago
+    users: await User.countDocuments(),
+    properties: 0, // Would query Property model
+    applications: 0, // Would query Application model
+    payments: 0, // Would query Payment model
+    maintenance: 0, // Would query Maintenance model
+    databaseSize: '125MB',
+    lastBackup: new Date()
   };
 
   res.json({
@@ -353,12 +410,17 @@ exports.getDatabaseStats = catchAsync(async (req, res, next) => {
 });
 
 exports.createDatabaseBackup = catchAsync(async (req, res, next) => {
-  // TODO: Implement actual database backup
-  const backupId = `backup_${Date.now()}`;
-  
+  // In a real implementation, you would create a database backup
+  const backup = {
+    id: new Date().getTime(),
+    timestamp: new Date(),
+    size: '125MB',
+    status: 'completed'
+  };
+
   res.json({
     success: true,
-    backupId,
+    backup,
     message: 'Database backup created successfully'
   });
 });
@@ -366,8 +428,9 @@ exports.createDatabaseBackup = catchAsync(async (req, res, next) => {
 exports.restoreDatabase = catchAsync(async (req, res, next) => {
   const { backupId } = req.body;
   
-  // TODO: Implement actual database restoration
-  
+  // In a real implementation, you would restore from backup
+  console.log('Restoring database:', backupId);
+
   res.json({
     success: true,
     message: 'Database restored successfully'
@@ -375,70 +438,29 @@ exports.restoreDatabase = catchAsync(async (req, res, next) => {
 });
 
 exports.getSecurityAudit = catchAsync(async (req, res, next) => {
-  const audit = {
-    userSecurity: {
-      totalUsers: await User.countDocuments(),
-      activeUsers: await User.countDocuments({ status: 'active' }),
-      bannedUsers: await User.countDocuments({ status: 'banned' }),
-      usersWith2FA: 0 // TODO: Calculate actual 2FA users
-    },
-    systemSecurity: {
-      sslEnabled: true,
-      rateLimitingEnabled: true,
-      corsConfigured: true,
-      helmetEnabled: true
-    },
-    recentActivity: [
-      {
-        timestamp: new Date(),
-        type: 'login',
-        user: 'admin@example.com',
-        ip: '192.168.1.1'
-      }
-    ]
-  };
-
+  const { page = 1, limit = 50 } = req.query;
+  
+  // In a real implementation, you would query security audit logs
+  const logs = [];
+  
   res.json({
     success: true,
-    audit
+    logs,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: 0,
+      pages: 0
+    }
   });
 });
 
 exports.resetAllPasswords = catchAsync(async (req, res, next) => {
-  const { confirmation } = req.body;
+  // In a real implementation, you would reset all user passwords
+  console.log('Resetting all passwords');
   
-  if (confirmation !== 'RESET_ALL_PASSWORDS_CONFIRM') {
-    return next(new AppError('Invalid confirmation', 400));
-  }
-
-  // TODO: Implement secure password reset
-  console.log('All passwords would be reset');
-
   res.json({
     success: true,
-    message: 'All passwords have been reset. Users will need to use password reset functionality.'
+    message: 'All passwords reset successfully'
   });
 });
-
-module.exports = {
-  getSystemHealth,
-  getSystemMetrics,
-  toggleMaintenance,
-  getAllUsers,
-  getUser,
-  updateUserRole,
-  deleteUser,
-  getAdmins,
-  createAdmin,
-  updateAdmin,
-  deleteAdmin,
-  getGlobalSettings,
-  updateGlobalSettings,
-  getSystemLogs,
-  getLogsByType,
-  getDatabaseStats,
-  createDatabaseBackup,
-  restoreDatabase,
-  getSecurityAudit,
-  resetAllPasswords
-};

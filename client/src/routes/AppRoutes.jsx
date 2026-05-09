@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PrivateRoute from './PrivateRoute';
 import Layout from '../components/common/Layout';
+import Footer from '../components/common/Footer';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 // Public pages
@@ -11,6 +12,9 @@ import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import VerifyEmail from '../pages/auth/VerifyEmail';
+import About from '../pages/About';
+import Contact from '../pages/Contact';
+import Subscription from '../pages/Subscription';
 
 // Lazy loaded pages
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'));
@@ -43,6 +47,9 @@ const Reports = lazy(() => import('../pages/admin/Reports/Reports'));
 // Landing page
 const Home = lazy(() => import('../pages/Home'));
 
+// Service Test Dashboard
+const ServiceTestDashboard = lazy(() => import('../components/ServiceTestDashboard'));
+
 // Not found
 const NotFound = lazy(() => import('../pages/NotFound'));
 
@@ -56,7 +63,9 @@ const LazyWrapper = ({ children }) => (
 const AppRoutes = () => {
   const { user, loading } = useAuth();
 
-  if (loading) {
+  // Don't show loading state for initial auth check
+  // Only show loading when actually loading user data
+  if (loading && user !== null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -67,12 +76,56 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<LazyWrapper><Home /></LazyWrapper>} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
-      <Route path="/verify-email/:token" element={<VerifyEmail />} />
+      <Route path="/" element={
+        <Layout>
+          <LazyWrapper><Home /></LazyWrapper>
+        </Layout>
+      } />
+      <Route path="/login" element={
+        <div className="min-h-screen flex flex-col">
+          <Login />
+          <Footer />
+        </div>
+      } />
+      <Route path="/register" element={
+        <div className="min-h-screen flex flex-col">
+          <Register />
+          <Footer />
+        </div>
+      } />
+      <Route path="/forgot-password" element={
+        <div className="min-h-screen flex flex-col">
+          <ForgotPassword />
+          <Footer />
+        </div>
+      } />
+      <Route path="/reset-password/:token" element={
+        <div className="min-h-screen flex flex-col">
+          <ResetPassword />
+          <Footer />
+        </div>
+      } />
+      <Route path="/verify-email/:token" element={
+        <div className="min-h-screen flex flex-col">
+          <VerifyEmail />
+          <Footer />
+        </div>
+      } />
+      <Route path="/about" element={
+        <Layout>
+          <About />
+        </Layout>
+      } />
+      <Route path="/contact" element={
+        <Layout>
+          <Contact />
+        </Layout>
+      } />
+      <Route path="/subscription" element={
+        <Layout>
+          <Subscription />
+        </Layout>
+      } />
 
       {/* Protected routes */}
       <Route path="/dashboard" element={
@@ -84,120 +137,178 @@ const AppRoutes = () => {
       } />
 
       {/* Property routes */}
-      <Route path="/properties" element={<LazyWrapper><Properties /></LazyWrapper>} />
-      <Route path="/properties/:id" element={<LazyWrapper><PropertyDetails /></LazyWrapper>} />
+      <Route path="/properties" element={
+        <Layout>
+          <LazyWrapper><Properties /></LazyWrapper>
+        </Layout>
+      } />
+      <Route path="/properties/:id" element={
+        <Layout>
+          <LazyWrapper><PropertyDetails /></LazyWrapper>
+        </Layout>
+      } />
 
       {/* Application routes */}
       <Route path="/applications" element={
         <PrivateRoute>
-          <LazyWrapper><Applications /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Applications /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/applications/:id" element={
         <PrivateRoute>
-          <LazyWrapper><ApplicationDetails /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><ApplicationDetails /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
       {/* Message routes */}
       <Route path="/messages" element={
         <PrivateRoute>
-          <LazyWrapper><Messages /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Messages /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/messages/:conversationId" element={
         <PrivateRoute>
-          <LazyWrapper><Conversation /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Conversation /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
       {/* Payment routes */}
       <Route path="/payments" element={
         <PrivateRoute>
-          <LazyWrapper><Payments /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Payments /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/payments/:id" element={
         <PrivateRoute>
-          <LazyWrapper><PaymentDetails /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><PaymentDetails /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
       {/* Maintenance routes */}
       <Route path="/maintenance" element={
         <PrivateRoute>
-          <LazyWrapper><Maintenance /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Maintenance /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/maintenance/:id" element={
         <PrivateRoute>
-          <LazyWrapper><MaintenanceDetails /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><MaintenanceDetails /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
       {/* Profile routes */}
       <Route path="/profile" element={
         <PrivateRoute>
-          <LazyWrapper><Profile /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Profile /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/settings" element={
         <PrivateRoute>
-          <LazyWrapper><Settings /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Settings /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
       {/* Agent routes */}
       <Route path="/agent/dashboard" element={
         <PrivateRoute roles={['agent']}>
-          <LazyWrapper><AgentDashboard /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><AgentDashboard /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/agent/properties" element={
         <PrivateRoute roles={['agent']}>
-          <LazyWrapper><MyProperties /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><MyProperties /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/agent/properties/add" element={
         <PrivateRoute roles={['agent']}>
-          <LazyWrapper><AddProperty /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><AddProperty /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/agent/properties/:id/edit" element={
         <PrivateRoute roles={['agent']}>
-          <LazyWrapper><EditProperty /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><EditProperty /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/agent/applications" element={
         <PrivateRoute roles={['agent']}>
-          <LazyWrapper><TenantApplications /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><TenantApplications /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={
         <PrivateRoute roles={['admin', 'super_admin']}>
-          <LazyWrapper><AdminDashboard /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><AdminDashboard /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/admin/users" element={
         <PrivateRoute roles={['admin', 'super_admin']}>
-          <LazyWrapper><UserManagement /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><UserManagement /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/admin/settings" element={
         <PrivateRoute roles={['admin', 'super_admin']}>
-          <LazyWrapper><SystemSettings /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><SystemSettings /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
       <Route path="/admin/reports" element={
         <PrivateRoute roles={['admin', 'super_admin']}>
-          <LazyWrapper><Reports /></LazyWrapper>
+          <Layout>
+            <LazyWrapper><Reports /></LazyWrapper>
+          </Layout>
         </PrivateRoute>
       } />
 
+      {/* Service Test Dashboard */}
+      <Route path="/test-services" element={
+        <div className="min-h-screen flex flex-col">
+          <LazyWrapper><ServiceTestDashboard /></LazyWrapper>
+          <Footer />
+        </div>
+      } />
+
       {/* 404 */}
-      <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
+      <Route path="*" element={
+        <Layout>
+          <LazyWrapper><NotFound /></LazyWrapper>
+        </Layout>
+      } />
     </Routes>
   );
 };
