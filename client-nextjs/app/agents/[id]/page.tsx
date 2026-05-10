@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useApi } from '../../../hooks/useApi'
 import { 
   UserIcon,
   BuildingOfficeIcon,
@@ -22,150 +23,35 @@ import {
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon, HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 
-// Mock agent data (in a real app, this would come from an API)
-const mockAgents = {
-  1: {
-    id: 1,
-    name: {
-      first: 'Sarah',
-      last: 'Johnson'
-    },
-    email: 'sarah.johnson@prorent.com',
-    phone: '+1 (555) 123-4567',
-    avatar: 'https://ui-avatars.com/api/?name=Sarah+Johnson&background=3b82f6&color=fff',
-    coverImage: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=300&fit=crop',
-    bio: 'Experienced real estate agent specializing in residential properties with over 8 years in the industry. I\'m passionate about helping clients find their perfect home and making the rental process smooth and stress-free.',
-    detailedBio: 'With over 8 years of experience in the New York real estate market, I have developed deep expertise in residential properties across all boroughs. My approach combines market knowledge with personalized service to ensure each client finds a property that truly meets their needs. I specialize in luxury apartments, family homes, and investment properties.',
-    location: 'New York, NY',
-    rating: 4.8,
-    reviewCount: 127,
-    propertiesCount: 45,
-    specialties: ['Residential', 'Luxury', 'Investment'],
-    languages: ['English', 'Spanish'],
-    verified: true,
-    responseTime: 'Within 2 hours',
-    experience: '8+ years',
-    license: 'NY Real Estate License #104512345',
-    company: 'Manhattan Properties Group',
-    website: 'www.sarahjohnson.realty',
-    socialLinks: {
-      linkedin: 'https://linkedin.com/in/sarahjohnson',
-      twitter: 'https://twitter.com/sarahjohnson'
-    },
-    achievements: [
-      'Top Producer 2023',
-      'President\'s Club 2022-2023',
-      '100+ Successful Transactions'
-    ],
-    workingHours: {
-      monday: '9:00 AM - 7:00 PM',
-      tuesday: '9:00 AM - 7:00 PM',
-      wednesday: '9:00 AM - 7:00 PM',
-      thursday: '9:00 AM - 7:00 PM',
-      friday: '9:00 AM - 7:00 PM',
-      saturday: '10:00 AM - 5:00 PM',
-      sunday: 'Closed'
-    }
-  },
-  2: {
-    id: 2,
-    name: {
-      first: 'Michael',
-      last: 'Chen'
-    },
-    email: 'michael.chen@prorent.com',
-    phone: '+1 (555) 234-5678',
-    avatar: 'https://ui-avatars.com/api/?name=Michael+Chen&background=10b981&color=fff',
-    coverImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=300&fit=crop',
-    bio: 'Commercial real estate expert helping businesses find the perfect space for their needs.',
-    detailedBio: 'Specializing in commercial real estate throughout the San Francisco Bay Area, I help businesses from startups to established corporations find spaces that drive growth and success.',
-    location: 'San Francisco, CA',
-    rating: 4.9,
-    reviewCount: 89,
-    propertiesCount: 32,
-    specialties: ['Commercial', 'Retail', 'Office'],
-    languages: ['English', 'Mandarin'],
-    verified: true,
-    responseTime: 'Within 1 hour',
-    experience: '6+ years',
-    license: 'CA Real Estate License #01987654',
-    company: 'Bay Area Commercial Realty',
-    website: 'www.michaelchen.commercial',
-    socialLinks: {
-      linkedin: 'https://linkedin.com/in/michaelchen'
-    }
-  }
-}
-
-// Mock properties for this agent
-const mockProperties = [
-  {
-    id: 1,
-    title: 'Luxury Downtown Apartment',
-    address: '123 Main St, New York, NY 10001',
-    price: 3500,
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 1200,
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop',
-    type: 'Apartment',
-    featured: true
-  },
-  {
-    id: 2,
-    title: 'Modern Family Home',
-    address: '456 Oak Ave, Brooklyn, NY 11201',
-    price: 4500,
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 1800,
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop',
-    type: 'House'
-  },
-  {
-    id: 3,
-    title: 'Stylish Studio Loft',
-    address: '789 Broadway, New York, NY 10003',
-    price: 2800,
-    bedrooms: 1,
-    bathrooms: 1,
-    area: 800,
-    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop',
-    type: 'Studio'
-  }
-]
-
-// Mock reviews
-const mockReviews = [
-  {
-    id: 1,
-    author: 'John Doe',
-    avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=6366f1&color=fff',
-    rating: 5,
-    date: '2024-01-15',
-    comment: 'Sarah was amazing! She found us the perfect apartment in just two weeks. Very professional and knowledgeable about the NYC market.',
-    property: 'Luxury Downtown Apartment'
-  },
-  {
-    id: 2,
-    author: 'Jane Smith',
-    avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=ec4899&color=fff',
-    rating: 4,
-    date: '2024-01-10',
-    comment: 'Great experience working with Sarah. She was always available to answer questions and made the process smooth.',
-    property: 'Modern Family Home'
-  }
-]
 
 export default function AgentDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const agentId = parseInt(params.id)
-  const agent = mockAgents[agentId]
+  const agentId = params.id
   const [isFavorite, setIsFavorite] = useState(false)
   const [activeTab, setActiveTab] = useState('properties')
 
-  if (!agent) {
+  // Fetch agent data
+  const { data: agentData, loading: agentLoading, error: agentError } = useApi(`/agents/${agentId}`)
+  const { data: propertiesData, loading: propertiesLoading } = useApi(`/agents/${agentId}/properties`)
+  const { data: reviewsData, loading: reviewsLoading } = useApi(`/agents/${agentId}/reviews`)
+
+  const agent = (agentData as any)?.agent
+  const properties = (propertiesData as any)?.properties || []
+  const reviews = (reviewsData as any)?.reviews || []
+
+  if (agentLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading agent profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (agentError || !agent) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -251,7 +137,7 @@ export default function AgentDetailPage() {
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <div className="flex items-start gap-6">
                 <img
-                  src={agent.avatar}
+                  src={agent.profile?.avatar}
                   alt={`${agent.name.first} ${agent.name.last}`}
                   className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg -mt-16"
                 />
@@ -260,7 +146,7 @@ export default function AgentDetailPage() {
                     <h1 className="text-2xl font-bold text-gray-900">
                       {agent.name.first} {agent.name.last}
                     </h1>
-                    {agent.verified && (
+                    {agent.metadata?.verified && (
                       <CheckCircleIcon className="h-6 w-6 text-blue-500" title="Verified Agent" />
                     )}
                   </div>
@@ -268,25 +154,25 @@ export default function AgentDetailPage() {
                   <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                     <div className="flex items-center">
                       <MapPinIcon className="h-4 w-4 mr-1" />
-                      {agent.location}
+                      {agent.profile?.businessAddress?.city}, {agent.profile?.businessAddress?.state}
                     </div>
                     <div className="flex items-center">
                       <BuildingOfficeIcon className="h-4 w-4 mr-1" />
-                      {agent.propertiesCount} properties
+                      {agent.metadata?.propertiesCount || 0} properties
                     </div>
                     <div className="flex items-center">
                       <ClockIcon className="h-4 w-4 mr-1" />
-                      {agent.responseTime}
+                      {agent.metadata?.responseTime || 'N/A'}
                     </div>
                   </div>
 
                   <div className="flex items-center mb-4">
-                    {renderStars(agent.rating)}
-                    <span className="ml-2 font-medium text-gray-900">{agent.rating}</span>
-                    <span className="ml-1 text-gray-500">({agent.reviewCount} reviews)</span>
+                    {renderStars(agent.metadata?.rating || 0)}
+                    <span className="ml-2 font-medium text-gray-900">{agent.metadata?.rating || 0}</span>
+                    <span className="ml-1 text-gray-500">({agent.metadata?.reviewCount || 0} reviews)</span>
                   </div>
 
-                  <p className="text-gray-700">{agent.bio}</p>
+                  <p className="text-gray-700">{agent.profile?.bio}</p>
                 </div>
               </div>
 
@@ -298,7 +184,7 @@ export default function AgentDetailPage() {
                 </button>
                 <button className="flex-1 border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   <PhoneIcon className="h-5 w-5 inline mr-2" />
-                  {agent.phone}
+                  {agent.profile?.phone || 'N/A'}
                 </button>
                 <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
                   <CalendarIcon className="h-5 w-5 inline mr-2" />
@@ -332,10 +218,16 @@ export default function AgentDetailPage() {
                 {activeTab === 'properties' && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Featured Properties ({mockProperties.length})
+                      Featured Properties ({properties.length})
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {mockProperties.map((property) => (
+                    {propertiesLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-600">Loading properties...</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {properties.map((property) => (
                         <div key={property.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                           <div className="relative">
                             <img
@@ -367,6 +259,7 @@ export default function AgentDetailPage() {
                         </div>
                       ))}
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -374,7 +267,7 @@ export default function AgentDetailPage() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">About {agent.name.first}</h3>
-                      <p className="text-gray-700 leading-relaxed">{agent.detailedBio}</p>
+                      <p className="text-gray-700 leading-relaxed">{agent.profile?.bio}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -383,19 +276,19 @@ export default function AgentDetailPage() {
                         <dl className="space-y-2">
                           <div className="flex justify-between">
                             <dt className="text-gray-600">Experience:</dt>
-                            <dd className="font-medium">{agent.experience}</dd>
+                            <dd className="font-medium">{agent.metadata?.experience || 'N/A'}</dd>
                           </div>
                           <div className="flex justify-between">
                             <dt className="text-gray-600">License:</dt>
-                            <dd className="font-medium">{agent.license}</dd>
+                            <dd className="font-medium">{agent.profile?.licenseNumber || 'N/A'}</dd>
                           </div>
                           <div className="flex justify-between">
                             <dt className="text-gray-600">Company:</dt>
-                            <dd className="font-medium">{agent.company}</dd>
+                            <dd className="font-medium">{agent.profile?.companyName || 'N/A'}</dd>
                           </div>
                           <div className="flex justify-between">
                             <dt className="text-gray-600">Languages:</dt>
-                            <dd className="font-medium">{agent.languages.join(', ')}</dd>
+                            <dd className="font-medium">{(agent.metadata?.languages || []).join(', ')}</dd>
                           </div>
                         </dl>
                       </div>
@@ -403,7 +296,7 @@ export default function AgentDetailPage() {
                       <div>
                         <h4 className="font-medium text-gray-900 mb-3">Specialties</h4>
                         <div className="flex flex-wrap gap-2">
-                          {agent.specialties.map((specialty, index) => (
+                          {(agent.metadata?.specialties || []).map((specialty, index) => (
                             <span
                               key={index}
                               className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
@@ -415,11 +308,11 @@ export default function AgentDetailPage() {
                       </div>
                     </div>
 
-                    {agent.achievements && (
+                    {agent.metadata?.achievements && agent.metadata.achievements.length > 0 && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-3">Achievements</h4>
                         <ul className="space-y-2">
-                          {agent.achievements.map((achievement, index) => (
+                          {agent.metadata.achievements.map((achievement, index) => (
                             <li key={index} className="flex items-center text-gray-700">
                               <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                               {achievement}
@@ -436,14 +329,20 @@ export default function AgentDetailPage() {
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-lg font-semibold text-gray-900">Client Reviews</h3>
                       <div className="flex items-center">
-                        {renderStars(agent.rating)}
-                        <span className="ml-2 font-medium text-gray-900">{agent.rating}</span>
-                        <span className="ml-1 text-gray-500">({agent.reviewCount} reviews)</span>
+                        {renderStars(agent.metadata?.rating || 0)}
+                        <span className="ml-2 font-medium text-gray-900">{agent.metadata?.rating || 0}</span>
+                        <span className="ml-1 text-gray-500">({agent.metadata?.reviewCount || 0} reviews)</span>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      {mockReviews.map((review) => (
+                    {reviewsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-600">Loading reviews...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {reviews.map((review) => (
                         <div key={review.id} className="border-b border-gray-200 pb-6 last:border-0">
                           <div className="flex items-start gap-4">
                             <img
@@ -462,12 +361,13 @@ export default function AgentDetailPage() {
                                 </div>
                               </div>
                               <p className="text-gray-700 mb-2">{review.comment}</p>
-                              <p className="text-sm text-blue-600 font-medium">{review.property}</p>
+                              <p className="text-sm text-blue-600 font-medium">{review.property?.title || review.property}</p>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -488,32 +388,32 @@ export default function AgentDetailPage() {
                   {agent.email}
                 </a>
                 <a
-                  href={`tel:${agent.phone}`}
+                  href={`tel:${agent.profile?.phone}`}
                   className="flex items-center text-gray-700 hover:text-blue-600 transition-colors"
                 >
                   <PhoneIcon className="h-5 w-5 mr-3 text-gray-400" />
-                  {agent.phone}
+                  {agent.profile?.phone || 'N/A'}
                 </a>
-                {agent.website && (
+                {agent.metadata?.website && (
                   <a
-                    href={`https://${agent.website}`}
+                    href={`https://${agent.metadata.website}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center text-gray-700 hover:text-blue-600 transition-colors"
                   >
                     <DocumentTextIcon className="h-5 w-5 mr-3 text-gray-400" />
-                    {agent.website}
+                    {agent.metadata.website}
                   </a>
                 )}
               </div>
             </div>
 
             {/* Working Hours */}
-            {agent.workingHours && (
+            {agent.metadata?.workingHours && (
               <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Working Hours</h3>
                 <div className="space-y-2">
-                  {Object.entries(agent.workingHours).map(([day, hours]) => (
+                  {Object.entries(agent.metadata.workingHours).map(([day, hours]: [string, string]) => (
                     <div key={day} className="flex justify-between text-sm">
                       <span className="text-gray-600 capitalize">{day}</span>
                       <span className="font-medium text-gray-900">{hours}</span>

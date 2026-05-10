@@ -1,6 +1,6 @@
 'use client'
 
-import { LucideIcon } from 'lucide-react'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 interface StatsCardProps {
   title: string
@@ -62,10 +62,11 @@ export default function StatsCard({ title, value, icon, color = 'blue', trend }:
         </div>
         {trend && (
           <div className="flex items-center space-x-2">
-            <LucideIcon 
-              name={trend.direction === 'up' ? 'trending-up' : 'trending-down'}
-              className={`h-4 w-4 ${trend.direction === 'up' ? 'text-green-500' : 'text-red-500'}`}
-            />
+            {trend.direction === 'up' ? (
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-red-500" />
+            )}
             <span className={`text-sm ${trend.direction === 'up' ? 'text-green-600' : 'text-red-600'}`}>
               {trend.direction === 'up' ? '+' : '-'}{Math.abs(trend.value)}%
             </span>

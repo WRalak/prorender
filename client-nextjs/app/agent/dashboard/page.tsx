@@ -20,7 +20,9 @@ import {
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   CalendarIcon,
-  UserIcon
+  UserIcon,
+  FunnelIcon,
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline'
 
 export default function AgentDashboardPage() {
@@ -71,7 +73,7 @@ export default function AgentDashboardPage() {
       
       setAgent(agentData);
       setStats(statsData);
-      setRecentProperties(propertiesData?.slice(0, 3) || []);
+      setRecentProperties((propertiesData as any[])?.slice(0, 3) || []);
     } catch (error) {
       console.error('Failed to fetch agent data:', error);
     } finally {
@@ -152,7 +154,7 @@ const navItems = [
             <span className="text-sm">Settings</span>
           </button>
           <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-100 transition-all">
-            <SupportIcon className="h-5 w-5" />
+            <QuestionMarkCircleIcon className="h-5 w-5" />
             <span className="text-sm">Support</span>
           </button>
         </div>
@@ -168,7 +170,7 @@ const navItems = [
           </div>
           <div className="flex gap-4">
             <button className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-lg font-semibold text-gray-700 hover:shadow-md transition-all">
-              <FilterListIcon className="h-5 w-5" />
+              <FunnelIcon className="h-5 w-5" />
               Filter View
             </button>
             <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-lg hover:bg-blue-700 transition-all">
@@ -252,16 +254,30 @@ const navItems = [
               <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
                 <ChartBarIcon className="h-6 w-6" />
               </div>
-        </div>
-      </div>
+              <span className="text-green-600 font-semibold flex items-center gap-1">
+                <ArrowTrendingUpIcon className="h-4 w-4" />
+                5%
+              </span>
+            </div>
+            <h3 className="text-xs text-gray-600 uppercase tracking-wider">Conv. Rate</h3>
+            <p className="text-2xl font-bold text-gray-900">{stats.conversionRate}%</p>
+            <div className="mt-4 h-8 flex items-end gap-1">
+              <div className="flex-1 bg-orange-100 h-4 rounded-sm"></div>
+              <div className="flex-1 bg-orange-100 h-6 rounded-sm"></div>
+              <div className="flex-1 bg-orange-400 h-5 rounded-sm"></div>
+              <div className="flex-1 bg-orange-100 h-3 rounded-sm"></div>
+              <div className="flex-1 bg-orange-600 h-7 rounded-sm"></div>
+            </div>
+          </div>
+        </section>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between">
-          <div>
+        {/* Revenue and Stats Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
             <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.monthlyRevenue)}</p>
             <p className="text-xs text-green-500 mt-1">{stats.monthlyRevenue > 0 ? `+${((stats.monthlyRevenue - stats.previousMonthlyRevenue) / stats.previousMonthlyRevenue) * 100}% this month` : '+0% this month'}</p>
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Average Rating</span>
                 <div className="flex items-center">
@@ -467,6 +483,7 @@ const navItems = [
             </div>
           </div>
         )}
-      </div>
-    )
+      </main>
+    </div>
+  )
 }

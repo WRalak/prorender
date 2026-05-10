@@ -85,7 +85,32 @@ const userSchema = new mongoose.Schema({
     commissionPaid: { type: Number, default: 0 },
     approvalNotes: String,
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    approvedAt: Date
+    approvedAt: Date,
+    // Agent-specific fields
+    specialties: [String],
+    languages: [String],
+    rating: { type: Number, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0 },
+    verified: { type: Boolean, default: false },
+    responseTime: String,
+    experience: String,
+    website: String,
+    socialLinks: {
+      linkedin: String,
+      twitter: String,
+      facebook: String,
+      instagram: String
+    },
+    achievements: [String],
+    workingHours: {
+      monday: String,
+      tuesday: String,
+      wednesday: String,
+      thursday: String,
+      friday: String,
+      saturday: String,
+      sunday: String
+    }
   },
   permissions: {
     canListProperties: { type: Boolean, default: false },

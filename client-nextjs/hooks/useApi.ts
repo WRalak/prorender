@@ -142,6 +142,12 @@ export function useAuth() {
 }
 
 // Agent registration hook
+// Use any for now to avoid TypeScript issues
+// interface AgentRegistrationResponse {
+//   id: string;
+//   message: string;
+// }
+
 export function useAgentRegistration() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
@@ -152,12 +158,12 @@ export function useAgentRegistration() {
 
     try {
       // First register the agent
-      const response = await apiClient.post(API_ENDPOINTS.AGENT.REGISTER, formData);
+      const response = await apiClient.post<any>(API_ENDPOINTS.AGENT.REGISTER, formData);
       
       // If there's a file, upload it
       if (file) {
         await apiClient.upload(API_ENDPOINTS.AGENT.VERIFY_LICENSE, file, {
-          agentId: response.data.id,
+          agentId: (response.data as any).id,
         });
       }
 

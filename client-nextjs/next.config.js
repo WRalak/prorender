@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['ui-avatars.com', 'lh3.googleusercontent.com'],
+    domains: ['ui-avatars.com', 'lh3.googleusercontent.com', 'images.unsplash.com'],
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',

@@ -17,6 +17,9 @@ const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const agentRoutes = require('./routes/agentRoutes');
+const listPropertyRoutes = require('./routes/listPropertyRoutes');
+const contentRoutes = require('./routes/contentRoutes');
 
 const app = express();
 
@@ -83,6 +86,9 @@ app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/agents', agentRoutes);
+app.use('/api/list-property', listPropertyRoutes);
+app.use('/api/content', contentRoutes);
 
 // 404 handler
 app.all('*', (req, res, next) => {

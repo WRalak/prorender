@@ -1,9 +1,47 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 
+// Default API fetcher
+const apiFetcher = async (endpoint) => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+  const response = await fetch(`${baseUrl}${endpoint}`);
+  
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
 // Custom hook for API calls with loading and error handling
-export const useApi = (key, fetcher, options = {}) => {
-  return useQuery(key, fetcher, {
+export const useApi = (keyOrEndpoint, fetcherOrOptions, options = {}) => {
+  // Handle old API: useApi(endpoint, options)
+  if (typeof fetcherOrOptions === 'object' && !fetcherOrOptions.then) {
+    const endpoint = keyOrEndpoint;
+    const userOptions = fetcherOrOptions;
+    
+    return useQuery({
+      queryKey: [endpoint],
+      queryFn: () => apiFetcher(endpoint),
+      retry: 1,
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        toast.error(error.message || 'An error occurred');
+      },
+      ...userOptions,
+    });
+  }
+  
+  // Handle new API: useApi(key, fetcher, options)
+  const key = keyOrEndpoint;
+  const fetcher = typeof fetcherOrOptions === 'string' 
+    ? () => apiFetcher(fetcherOrOptions)
+    : fetcherOrOptions;
+    
+  return useQuery({
+    queryKey: key,
+    queryFn: fetcher,
     retry: 1,
     refetchOnWindowFocus: false,
     onError: (error) => {
@@ -17,7 +55,8 @@ export const useApi = (key, fetcher, options = {}) => {
 export const useApiMutation = (mutationFn, options = {}) => {
   const queryClient = useQueryClient();
 
-  return useMutation(mutationFn, {
+  return useMutation({
+    mutationFn: mutationFn,
     onError: (error) => {
       toast.error(error.message || 'An error occurred');
     },
@@ -29,7 +68,7 @@ export const useApiMutation = (mutationFn, options = {}) => {
       // Invalidate related queries
       if (options.invalidateQueries) {
         options.invalidateQueries.forEach((queryKey) => {
-          queryClient.invalidateQueries(queryKey);
+          queryClient.invalidateQueries({ queryKey });
         });
       }
       
@@ -79,8 +118,8 @@ export const useFileUpload = (endpoint, options = {}) => {
   const [progress, setProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
-  const uploadMutation = useMutation(
-    async (file) => {
+  const uploadMutation = useMutation({
+    mutationFn: async (file) => {
       setIsUploading(true);
       setProgress(0);
 
@@ -117,24 +156,22 @@ export const useFileUpload = (endpoint, options = {}) => {
         xhr.send(formData);
       });
     },
-    {
-      onSuccess: (data) => {
-        toast.success('File uploaded successfully');
-        setProgress(0);
-        if (options.onSuccess) {
-          options.onSuccess(data);
-        }
-      },
-      onError: (error) => {
-        toast.error('File upload failed');
-        setProgress(0);
-        setIsUploading(false);
-        if (options.onError) {
-          options.onError(error);
-        }
-      },
-    }
-  );
+    onSuccess: (data) => {
+      toast.success('File uploaded successfully');
+      setProgress(0);
+      if (options.onSuccess) {
+        options.onSuccess(data);
+      }
+    },
+    onError: (error) => {
+      toast.error('File upload failed');
+      setProgress(0);
+      setIsUploading(false);
+      if (options.onError) {
+        options.onError(error);
+      }
+    },
+  });
 
   return {
     upload: uploadMutation.mutate,
@@ -187,7 +224,99 @@ export const useRealtimeApi = (key, fetcher, socketEvent, options = {}) => {
     }
   }, [socket, socketEvent, key, queryClient]);
 
-  return useQuery(key, fetcher, options);
+  return useQuery({
+    queryKey: key,
+    queryFn: fetcher,
+    ...options
+  });
+};
+
+// Export commonly used hooks
+export const useAuth = () => {
+  // This is a placeholder - actual auth logic should be in AuthContext
+  return useQuery({
+    queryKey: ['auth'],
+    queryFn: () => fetch('/api/auth/me').then(res => res.json())
+  });
+};
+
+export const useAgentRegistration = () => {
+  // This is a placeholder for agent registration
+  const queryClient = useQueryClient();
+  
+  const registerAgent = useMutation({
+    mutationFn: async (agentData) => {
+      const response = await fetch('/api/auth/register/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agentData)
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success('Agent registration successful!');
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Registration failed');
+    }
+  });
+
+  return {
+    registerAgent: registerAgent.mutateAsync,
+    isLoading: registerAgent.isLoading
+  };
+};
+
+// Properties hook
+export const useProperties = (filters) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const execute = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let result;
+      const queryString = filters ? `?${new URLSearchParams(filters).toString()}` : '';
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/properties${queryString}`);
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+      
+      result = await response.json();
+      setData(result);
+      return result;
+    } catch (err) {
+      const apiError = {
+        message: err.message || 'An error occurred',
+        status: 500,
+        code: 'UNKNOWN_ERROR'
+      };
+      setError(apiError);
+      throw apiError;
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  // Auto-execute on mount if needed
+// useEffect(() => {
+//   if (options.immediate) {
+//     execute();
+//   }
+// }, [execute, options.immediate]);
+
+  return {
+    data,
+    loading,
+    error,
+    execute,
+    refetch: execute,
+  };
 };
 
 export default useApi;

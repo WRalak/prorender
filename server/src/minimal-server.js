@@ -52,6 +52,14 @@ try {
   console.error('❌ Failed to load property routes:', error.message);
 }
 
+// Add agent routes
+try {
+  app.use('/api/agents', require('./routes/agentRoutes'));
+  console.log('✅ Agent routes loaded');
+} catch (error) {
+  console.error('❌ Failed to load agent routes:', error.message);
+}
+
 // Add remaining routes
 const routes = [
   { path: '/api/applications', file: 'applicationRoutes', name: 'Application' },
